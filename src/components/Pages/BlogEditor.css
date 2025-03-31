@@ -1,0 +1,16 @@
+
+*{
+  margin: 0;
+  padding: 0;
+}
+body {
+  overflow: hidden;
+}
+
+
+.main-container{ 
+    display: grid;
+    grid-template-columns: 3fr 1.1fr;
+    gap: 10px;
+    min-height: 100vh;
+  }

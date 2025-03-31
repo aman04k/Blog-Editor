@@ -1,0 +1,219 @@
+ import React, { useState, useRef, useEffect } from "react";
+import Quill from "quill";
+import "quill/dist/quill.snow.css";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+
+function BlogEditor() {
+  const [openModal, setOpenModal] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [selectedType, setSelectedType] = useState(null);
+  const [inputValue, setInputValue] = useState("");
+  const [savedContent, setSavedContent] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const quillRef = useRef(null);
+  const editorContainerRef = useRef(null);
+  const [isSidebarMounted, setIsSidebarMounted] = useState(false);
+
+  useEffect(() => {
+    setIsSidebarMounted(true); // Ensure sidebar is considered mounted after initial render
+  }, []);
+
+  const initializeQuill = () => {
+    if (editorContainerRef.current) {
+      editorContainerRef.current.innerHTML = "";
+      quillRef.current = new Quill(editorContainerRef.current, {
+        theme: "snow",
+        placeholder: "Write something awesome...",
+        modules: {
+          toolbar: [
+            [{ font: [] }, { size: [] }],
+            ["bold", "italic", "underline", "strike"],
+            [{ color: [] }, { background: [] }],
+            [{ list: "ordered" }, { list: "bullet" }],
+            ["link", "image", "code-block"],
+            ["clean"],
+          ],
+        },
+      });
+    }
+  };
+
+  const handleSelectOption = (type) => {
+    setSelectedType(type);
+    setDropdownOpen(false);
+    setOpenModal(true);
+    if (type === "paragraph") {
+      setTimeout(() => initializeQuill(), 0);
+    }
+  };
+
+  const handleSelect = (type) => {
+    setSelectedType(type);
+    setDropdownOpen(false);
+    setOpenModal(true);
+  };
+
+  const handleFileChange = (e) => {
+    setSelectedFile(e.target.files[0]);
+  };
+
+  const handleSave = () => {
+    let newItem;
+    const newId = `item-${Date.now()}`;
+    if (selectedType === "heading") {
+      newItem = { id: newId, content: `<h2>${inputValue}</h2>`, type: "Heading" };
+      setInputValue("");
+    } else if (selectedType === "image" && selectedFile) {
+      newItem = {
+        id: newId,
+        content: `<img src="${URL.createObjectURL(selectedFile)}" alt="Uploaded" class="w-full h-auto" />`,
+        type: "Image",
+      };
+      setSelectedFile(null);
+    } else if (quillRef.current) {
+      const htmlContent = quillRef.current.root.innerHTML;
+      newItem = { id: newId, content: htmlContent, type: "Paragraph" };
+    }
+
+    if (newItem) {
+      setSavedContent((prev) => [...prev, newItem]);
+    }
+    setOpenModal(false);
+    setSelectedType(null);
+  };
+
+  const onDragEnd = (result) => {
+    if (!result.destination) {
+      return;
+    }
+
+    const items = Array.from(savedContent);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setSavedContent(items);
+  };
+
+  return (
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className="grid grid-cols-[3fr_1.3fr] gap-2 min-h-screen">
+        {/* Main Content Area */}
+        <div className="w-full min-h-screen bg-gray-300 rounded-2xl my-4 p-4 overflow-y-auto">
+          <h3 className="text-lg font-semibold mb-2">Saved Content:</h3>
+          <Droppable droppableId="savedContentList">
+            {(provided) => (
+              <div ref={provided.innerRef} {...provided.droppableProps}>
+                {savedContent.length === 0 ? (
+                  <p className="text-gray-500">No content saved yet.</p>
+                ) : (
+                  savedContent.map((item, index) => (
+                    <Draggable key={item.id} draggableId={item.id} index={index}>
+                      {(dragProvided) => (
+                        <div
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          {...dragProvided.dragHandleProps}
+                          className="bg-white shadow-md p-4 rounded-md border mt-2 cursor-grab"
+                          dangerouslySetInnerHTML={{ __html: item.content }}
+                        />
+                      )}
+                    </Draggable>
+                  ))
+                )}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </div>
+
+        {/* Sidebar */}
+        <div className="w-[30%] bg-gray-300 rounded-2xl p-4 fixed top-0 right-0 h-screen mt-4">
+          <button
+            className="px-4 py-2 bg-blue-500 w-full text-white rounded-md"
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+          >
+            ➕ Add Content
+          </button>
+
+          {dropdownOpen && (
+            <div className="mt-2 bg-white shadow-md rounded-md p-2">
+              <div className="p-2 hover:bg-gray-200 cursor-pointer" onClick={() => handleSelect("heading")}>
+                Heading
+              </div>
+              <div className="p-2 hover:bg-gray-200 cursor-pointer" onClick={() => handleSelectOption("paragraph")}>
+                Paragraph
+              </div>
+              <div className="p-2 hover:bg-gray-200 cursor-pointer" onClick={() => handleSelect("image")}>
+                Image
+              </div>
+            </div>
+          )}
+
+          {/* Sidebar Content List */}
+          <h4 className="mt-4 font-semibold">Content Types</h4>
+          {isSidebarMounted && ( // Conditionally render the Droppable
+            <Droppable droppableId="sidebarContentList">
+              {(provided) => (
+                <div ref={provided.innerRef} {...provided.droppableProps}>
+                  {savedContent.length === 0 ? (
+                    <p className="text-gray-500 mt-4">No content saved yet.</p>
+                  ) : (
+                    <ul className="list-disc pl-6 mt-4">
+                      {savedContent.map((item, index) => (
+                        <Draggable key={`sidebar-item-${item.id}`} draggableId={`sidebar-item-${item.id}`} index={index}>
+                          {(dragProvided) => (
+                            <li
+                              ref={dragProvided.innerRef}
+                              {...dragProvided.draggableProps}
+                              {...dragProvided.dragHandleProps}
+                              className="mb-2 font-semibold cursor-grab"
+                            >
+                              {item.type}
+                            </li>
+                          )}
+                        </Draggable>
+                      ))}
+                    </ul>
+                  )}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          )}
+        </div>
+
+        {/* Modal for Adding Content */}
+        {openModal && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-[90%] max-w-3xl max-h-[90%] overflow-y-auto">
+              <h2 className="text-xl font-semibold mb-4">Enter {selectedType}:</h2>
+              {selectedType === "image" ? (
+                <input type="file" accept="image/*" onChange={handleFileChange} />
+              ) : selectedType === "paragraph" ? (
+                <div ref={editorContainerRef} className="border p-2 w-full rounded-md" />
+              ) : (
+                <input
+                  type="text"
+                  className="border p-2 w-full rounded-md"
+                  placeholder={`Enter ${selectedType}...`}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                />
+              )}
+              <div className="flex justify-end gap-4 mt-4">
+                <button className="px-4 py-2 bg-red-500 text-white rounded-md" onClick={() => setOpenModal(false)}>
+                  Cancel
+                </button>
+                <button className="px-4 py-2 bg-blue-500 text-white rounded-md" onClick={handleSave}>
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </DragDropContext>
+  );
+}
+
+export default BlogEditor;
