@@ -152,7 +152,7 @@ function BlogEditor() {
               <div
                 className="p-2 hover:bg-gray-200 cursor-pointer rounded-md"
                 onClick={() => handleSelect("image")}
-              >+
+              >
                 Image
               </div>
             </div>
@@ -197,6 +197,7 @@ function BlogEditor() {
             <div className="bg-white p-6 rounded-lg shadow-lg w-[90%] max-w-xl max-h-[90%] overflow-y-auto">
               <h2 className="text-xl font-semibold mb-4">Add {selectedType}</h2>
               {selectedType === "image" ? (
+                
                 <input type="file" accept="image/*" onChange={handleFileChange} className="w-full p-2 border rounded-md" />
               ) : selectedType === "paragraph" ? (
                 <div ref={editorContainerRef} className="border p-2 w-full rounded-md" />
