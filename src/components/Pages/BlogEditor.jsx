@@ -152,7 +152,7 @@ function BlogEditor() {
               <div
                 className="p-2 hover:bg-gray-200 cursor-pointer rounded-md"
                 onClick={() => handleSelect("image")}
-              >
+              >+
                 Image
               </div>
             </div>
